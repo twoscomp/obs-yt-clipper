@@ -51,12 +51,21 @@ GAME_NAME_MAP = {
 def script_description():
     return """<h2>OBS YouTube Clip Uploader</h2>
     <p>Automatically uploads replay buffer clips to YouTube.</p>
-    <p>Detects the active game and names clips accordingly.</p>
+    <hr>
+    <p><b>Configuration Required:</b></p>
+    <ul>
+    <li><b>Upload Script Path</b>: Path to upload_clip.py in your repo</li>
+    <li><b>Python Executable</b>: Path to python in your .venv/bin/</li>
+    </ul>
+    <p>Run <code>./setup.sh</code> to see the exact paths.</p>
     """
 
 
 def script_properties():
     props = obs.obs_properties_create()
+
+    # Use script's directory as starting point for file browser
+    script_dir = str(Path(__file__).parent) if Path(__file__).exists() else str(Path.home())
 
     obs.obs_properties_add_path(
         props,
@@ -64,7 +73,7 @@ def script_properties():
         "Upload Script Path",
         obs.OBS_PATH_FILE,
         "Python files (*.py)",
-        str(Path.home() / "obs-yt-clipper"),
+        script_dir,
     )
 
     obs.obs_properties_add_text(
@@ -78,12 +87,9 @@ def script_properties():
 
 
 def script_defaults(settings):
-    obs.obs_data_set_default_string(
-        settings,
-        "upload_script_path",
-        str(Path.home() / "obs-yt-clipper" / "upload_clip.py"),
-    )
-    obs.obs_data_set_default_string(settings, "python_executable", "python3")
+    # Empty defaults - user must configure via OBS UI
+    obs.obs_data_set_default_string(settings, "upload_script_path", "")
+    obs.obs_data_set_default_string(settings, "python_executable", "")
 
 
 def script_update(settings):
@@ -230,7 +236,15 @@ def handle_replay_saved():
 
     play_audio_cue()
 
-    if not upload_script_path or not os.path.exists(upload_script_path):
+    if not upload_script_path:
+        obs.script_log(obs.LOG_WARNING, "Upload script path not configured. Go to Tools > Scripts to set paths.")
+        return
+
+    if not python_executable:
+        obs.script_log(obs.LOG_WARNING, "Python executable not configured. Go to Tools > Scripts to set paths.")
+        return
+
+    if not os.path.exists(upload_script_path):
         obs.script_log(obs.LOG_WARNING, f"Upload script not found: {upload_script_path}")
         return
 

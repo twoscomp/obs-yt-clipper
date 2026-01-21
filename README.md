@@ -16,21 +16,21 @@ When you save a replay buffer clip in OBS, this tool:
 - `xdotool` (for game detection)
 - `notify-send` (for desktop notifications)
 
-## Installation
+## Quick Start
 
-### 1. Clone and Set Up Virtual Environment
+### 1. Clone and Run Setup
 
 ```bash
 git clone https://github.com/yourusername/obs-yt-clipper.git
 cd obs-yt-clipper
-
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+./setup.sh
 ```
+
+The setup script will:
+- Check system dependencies
+- Create a Python virtual environment
+- Install Python dependencies
+- Print the exact paths you need for OBS configuration
 
 ### 2. Install System Dependencies
 
@@ -63,17 +63,15 @@ sudo apt install xdotool libnotify-bin
 10. Save it as `~/.config/obs-yt-clipper/credentials.json`:
 
 ```bash
-mkdir -p ~/.config/obs-yt-clipper
 mv ~/Downloads/client_secret_*.json ~/.config/obs-yt-clipper/credentials.json
 ```
 
 ### 4. Authenticate
 
-Run the authentication setup script:
+Run the authentication setup (the exact command is shown by `./setup.sh`):
 
 ```bash
-source .venv/bin/activate
-python3 auth_setup.py
+/path/to/repo/.venv/bin/python /path/to/repo/auth_setup.py
 ```
 
 This opens a browser window to authorize the app. After authorization, a refresh token is saved locally.
@@ -83,10 +81,10 @@ This opens a browser window to authorize the app. After authorization, a refresh
 1. Open OBS Studio
 2. Go to **Tools > Scripts**
 3. Click the **+** button
-4. Add the full path to `obs_clip_hook.py` (e.g., `/home/yourusername/obs-yt-clipper/obs_clip_hook.py`)
-5. In the script settings, configure:
-   - **Upload Script Path**: `/home/yourusername/obs-yt-clipper/upload_clip.py`
-   - **Python Executable**: `/home/yourusername/obs-yt-clipper/.venv/bin/python`
+4. Add `obs_clip_hook.py` from your repo directory
+5. In the script settings, paste the paths from `./setup.sh` output:
+   - **Upload Script Path**: `/path/to/repo/upload_clip.py`
+   - **Python Executable**: `/path/to/repo/.venv/bin/python`
 
 ### 6. Enable Replay Buffer
 
@@ -164,8 +162,7 @@ cat ~/.local/share/obs-yt-clipper/uploads.log
 ### Test upload manually
 
 ```bash
-source ~/obs-yt-clipper/.venv/bin/activate
-python3 ~/obs-yt-clipper/upload_clip.py \
+/path/to/repo/.venv/bin/python /path/to/repo/upload_clip.py \
   --file "/path/to/test/video.mp4" \
   --title "Test Upload"
 ```
@@ -182,14 +179,13 @@ python3 ~/obs-yt-clipper/upload_clip.py \
 If uploads fail with authentication errors, re-run the auth setup:
 
 ```bash
-source ~/obs-yt-clipper/.venv/bin/activate
-python3 ~/obs-yt-clipper/auth_setup.py
+/path/to/repo/.venv/bin/python /path/to/repo/auth_setup.py
 ```
 
 ### OBS script not running
 
 1. Check OBS script log: **Tools > Scripts > Script Log**
-2. Ensure the Python executable path points to your virtual environment
+2. Ensure the Python executable path points to your virtual environment's python
 3. Verify the upload script path is correct
 
 ### No notifications
@@ -209,13 +205,14 @@ python3 ~/obs-yt-clipper/auth_setup.py
 ~/.local/share/obs-yt-clipper/
 └── uploads.log         # Upload history and errors
 
-~/obs-yt-clipper/
-├── .venv/              # Python virtual environment
-├── obs_clip_hook.py    # OBS script
-├── upload_clip.py      # Upload script
-├── auth_setup.py       # OAuth setup
-├── requirements.txt    # Python dependencies
-└── README.md           # This file
+/path/to/obs-yt-clipper/   # Your cloned repo
+├── .venv/                 # Python virtual environment (created by setup.sh)
+├── obs_clip_hook.py       # OBS script
+├── upload_clip.py         # Upload script
+├── auth_setup.py          # OAuth setup
+├── requirements.txt       # Python dependencies
+├── setup.sh               # Setup script
+└── README.md              # This file
 ```
 
 ## Running Tests

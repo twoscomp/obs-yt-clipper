@@ -1,14 +1,14 @@
 #!/bin/bash
-# OBS YouTube Clip Uploader - Installation Script
+# OBS YouTube Clip Uploader - Setup Script
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$HOME/.config/obs-yt-clipper"
 DATA_DIR="$HOME/.local/share/obs-yt-clipper"
-INSTALL_DIR="$HOME/obs-yt-clipper"
+VENV_DIR="$SCRIPT_DIR/.venv"
 
-echo "=== OBS YouTube Clip Uploader - Installation ==="
+echo "=== OBS YouTube Clip Uploader - Setup ==="
 echo
 
 # Check dependencies
@@ -16,11 +16,6 @@ echo "Checking dependencies..."
 
 if ! command -v python3 &> /dev/null; then
     echo "ERROR: python3 is required but not installed."
-    exit 1
-fi
-
-if ! command -v pip3 &> /dev/null && ! command -v pip &> /dev/null; then
-    echo "ERROR: pip is required but not installed."
     exit 1
 fi
 
@@ -37,18 +32,10 @@ fi
 echo "Dependencies OK"
 echo
 
-# Create directories
+# Create config directories
 echo "Creating directories..."
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$DATA_DIR"
-mkdir -p "$INSTALL_DIR"
-
-# Copy files
-echo "Copying files..."
-cp "$SCRIPT_DIR/upload_clip.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/auth_setup.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/obs_clip_hook.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/requirements.txt" "$INSTALL_DIR/"
 
 # Copy config example if config doesn't exist
 if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
@@ -56,17 +43,17 @@ if [ ! -f "$CONFIG_DIR/config.yaml" ]; then
     echo "Created config file at $CONFIG_DIR/config.yaml"
 fi
 
-# Make scripts executable
-chmod +x "$INSTALL_DIR/upload_clip.py"
-chmod +x "$INSTALL_DIR/auth_setup.py"
+# Create virtual environment
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment..."
+    python3 -m venv "$VENV_DIR"
+fi
 
-# Install Python dependencies
-echo
 echo "Installing Python dependencies..."
-pip3 install --user -r "$INSTALL_DIR/requirements.txt"
+"$VENV_DIR/bin/pip" install -r "$SCRIPT_DIR/requirements.txt"
 
 echo
-echo "=== Installation Complete ==="
+echo "=== Setup Complete ==="
 echo
 echo "Next steps:"
 echo
@@ -77,13 +64,15 @@ echo "   c. Create OAuth 2.0 credentials (Desktop app type)"
 echo "   d. Download the JSON and save as: $CONFIG_DIR/credentials.json"
 echo
 echo "2. Run the authentication setup:"
-echo "   python3 $INSTALL_DIR/auth_setup.py"
+echo "   $VENV_DIR/bin/python $SCRIPT_DIR/auth_setup.py"
 echo
 echo "3. Add the OBS script:"
 echo "   a. Open OBS Studio"
 echo "   b. Go to Tools > Scripts"
-echo "   c. Click '+' and add: $INSTALL_DIR/obs_clip_hook.py"
-echo "   d. Configure the 'Upload Script Path' to: $INSTALL_DIR/upload_clip.py"
+echo "   c. Click '+' and add: $SCRIPT_DIR/obs_clip_hook.py"
 echo
-echo "4. Test by saving a replay buffer clip!"
+echo "4. Configure the OBS script settings (COPY THESE PATHS):"
+echo "   Upload Script Path: $SCRIPT_DIR/upload_clip.py"
+echo "   Python Executable:  $VENV_DIR/bin/python"
 echo
+echo "5. Test by saving a replay buffer clip!"
