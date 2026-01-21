@@ -119,6 +119,21 @@ def _run_host_command(cmd: list) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True, timeout=2, env=env)
 
 
+def play_audio_cue():
+    """Play a notification sound when clip is saved."""
+    script_dir = Path(__file__).parent
+    audio_file = script_dir / "sounds" / "clip_saved.wav"
+
+    if not audio_file.exists():
+        obs.script_log(obs.LOG_DEBUG, f"Audio cue file not found: {audio_file}")
+        return
+
+    try:
+        _run_host_command(["paplay", str(audio_file)])
+    except Exception as e:
+        obs.script_log(obs.LOG_DEBUG, f"Could not play audio cue: {e}")
+
+
 def get_active_window_name() -> str:
     """Get the name of the active window using xdotool."""
     try:
@@ -212,6 +227,8 @@ def find_latest_replay(directory: str) -> str:
 def handle_replay_saved():
     """Handle replay buffer save event."""
     global upload_script_path, python_executable
+
+    play_audio_cue()
 
     if not upload_script_path or not os.path.exists(upload_script_path):
         obs.script_log(obs.LOG_WARNING, f"Upload script not found: {upload_script_path}")

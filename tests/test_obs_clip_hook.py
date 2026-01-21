@@ -30,6 +30,7 @@ from obs_clip_hook import (
     get_active_window_class,
     detect_game_name,
     find_latest_replay,
+    play_audio_cue,
 )
 
 
@@ -249,12 +250,13 @@ class TestFindLatestReplay:
 class TestHandleReplaySaved:
     """Tests for handle_replay_saved function."""
 
+    @patch("obs_clip_hook.play_audio_cue")
     @patch("obs_clip_hook.subprocess.Popen")
     @patch("obs_clip_hook.find_latest_replay")
     @patch("obs_clip_hook.get_replay_path")
     @patch("obs_clip_hook.detect_game_name")
     def test_handle_replay_saved_spawns_upload_subprocess(
-        self, mock_detect, mock_replay_path, mock_find, mock_popen, tmp_path
+        self, mock_detect, mock_replay_path, mock_find, mock_popen, mock_audio_cue, tmp_path
     ):
         """Should spawn upload subprocess with correct arguments."""
         from obs_clip_hook import handle_replay_saved
@@ -285,12 +287,13 @@ class TestHandleReplaySaved:
         assert "--title" in call_args
         assert "Valorant" in call_args[-1]  # Title includes game name
 
+    @patch("obs_clip_hook.play_audio_cue")
     @patch("obs_clip_hook.subprocess.Popen")
     @patch("obs_clip_hook.find_latest_replay")
     @patch("obs_clip_hook.get_replay_path")
     @patch("obs_clip_hook.detect_game_name")
     def test_handle_replay_saved_renames_file(
-        self, mock_detect, mock_replay_path, mock_find, mock_popen, tmp_path
+        self, mock_detect, mock_replay_path, mock_find, mock_popen, mock_audio_cue, tmp_path
     ):
         """Should rename the replay file with game name and timestamp."""
         from obs_clip_hook import handle_replay_saved
@@ -317,10 +320,11 @@ class TestHandleReplaySaved:
         renamed_files = list(tmp_path.glob("TestGame - *.mp4"))
         assert len(renamed_files) == 1
 
+    @patch("obs_clip_hook.play_audio_cue")
     @patch("obs_clip_hook.find_latest_replay")
     @patch("obs_clip_hook.get_replay_path")
     def test_handle_replay_saved_logs_warning_when_no_upload_script(
-        self, mock_replay_path, mock_find
+        self, mock_replay_path, mock_find, mock_audio_cue
     ):
         """Should log warning when upload script path is not configured."""
         from obs_clip_hook import handle_replay_saved
@@ -334,3 +338,55 @@ class TestHandleReplaySaved:
         mock_obs.script_log.assert_called()
         # Should not proceed to find replay
         mock_find.assert_not_called()
+
+
+class TestPlayAudioCue:
+    """Tests for play_audio_cue function."""
+
+    @patch("obs_clip_hook._run_host_command")
+    def test_play_audio_cue_calls_paplay(self, mock_run, tmp_path):
+        """Should call paplay with the audio file path."""
+        # Create a temporary sounds directory with audio file
+        sounds_dir = tmp_path / "sounds"
+        sounds_dir.mkdir()
+        audio_file = sounds_dir / "clip_saved.wav"
+        audio_file.write_bytes(b"fake wav data")
+
+        with patch("obs_clip_hook.Path") as mock_path:
+            # Mock Path(__file__).parent to return tmp_path
+            mock_path.return_value.parent = tmp_path
+
+            play_audio_cue()
+
+            mock_run.assert_called_once()
+            call_args = mock_run.call_args[0][0]
+            assert call_args[0] == "paplay"
+            assert "clip_saved.wav" in call_args[1]
+
+    @patch("obs_clip_hook._run_host_command")
+    def test_play_audio_cue_handles_missing_file(self, mock_run, tmp_path):
+        """Should not call paplay when audio file doesn't exist."""
+        with patch("obs_clip_hook.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+
+            play_audio_cue()
+
+            mock_run.assert_not_called()
+
+    @patch("obs_clip_hook._run_host_command")
+    def test_play_audio_cue_handles_exception(self, mock_run, tmp_path):
+        """Should handle exceptions gracefully."""
+        sounds_dir = tmp_path / "sounds"
+        sounds_dir.mkdir()
+        audio_file = sounds_dir / "clip_saved.wav"
+        audio_file.write_bytes(b"fake wav data")
+
+        mock_run.side_effect = Exception("paplay failed")
+
+        with patch("obs_clip_hook.Path") as mock_path:
+            mock_path.return_value.parent = tmp_path
+
+            # Should not raise
+            play_audio_cue()
+
+            mock_obs.script_log.assert_called()
