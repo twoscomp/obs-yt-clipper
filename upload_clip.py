@@ -80,6 +80,84 @@ def send_notification(title: str, message: str, urgency: str = "normal") -> None
         pass  # notify-send not available
 
 
+def copy_to_clipboard(text: str) -> bool:
+    """Copy text to clipboard using wl-copy (Wayland) or xclip (X11)."""
+    # Try wl-copy first (Wayland)
+    try:
+        subprocess.run(
+            ["wl-copy", text],
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+
+    # Fall back to xclip (X11)
+    try:
+        subprocess.run(
+            ["xclip", "-selection", "clipboard"],
+            input=text.encode(),
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        pass
+
+    return False
+
+
+def send_notification_with_actions(
+    title: str,
+    message: str,
+    url: str,
+    logger: logging.Logger,
+) -> None:
+    """Send a notification with Copy Link and Open in Browser actions."""
+    try:
+        # notify-send with actions blocks until user interacts or timeout
+        result = subprocess.run(
+            [
+                "notify-send",
+                "-u", "normal",
+                "-a", "OBS Clip Uploader",
+                "--action=copy=Copy Link",
+                "--action=open=Open in Browser",
+                title,
+                message,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,  # 30 second timeout
+        )
+
+        action = result.stdout.strip()
+
+        if action == "copy":
+            if copy_to_clipboard(url):
+                logger.info(f"Copied URL to clipboard: {url}")
+                send_notification("Link Copied!", url)
+            else:
+                logger.warning("Failed to copy to clipboard - no clipboard tool available")
+                send_notification("Copy Failed", "Install wl-copy or xclip", "critical")
+
+        elif action == "open":
+            logger.info(f"Opening URL in browser: {url}")
+            subprocess.Popen(
+                ["xdg-open", url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+    except subprocess.TimeoutExpired:
+        logger.debug("Notification timed out without user interaction")
+    except FileNotFoundError:
+        # Fall back to basic notification
+        logger.debug("notify-send with actions not available, using basic notification")
+        send_notification(title, message)
+
+
 def get_youtube_service(token_path: str, logger: logging.Logger):
     """Build YouTube API service using cached credentials."""
     token_file = Path(token_path)
@@ -224,7 +302,7 @@ def main():
 
         video_url = f"https://youtu.be/{video_id}"
         logger.info(f"Video URL: {video_url}")
-        send_notification("Clip Uploaded!", video_url)
+        send_notification_with_actions("Clip Uploaded!", video_url, video_url, logger)
 
     except FileNotFoundError as e:
         send_notification("Upload Failed", str(e), "critical")
