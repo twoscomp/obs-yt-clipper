@@ -1,0 +1,25 @@
+# OBS YouTube Clip Uploader Configuration
+# Copy this file to ~/.config/obs-yt-clipper/config.yaml
+
+youtube:
+  # Video privacy setting: public, unlisted, or private
+  privacy: unlisted
+  # Description template for uploaded videos
+  # Available variables: {date}
+  description_template: "Recorded on {date}"
+
+# Path to OAuth credentials from Google Cloud Console
+credentials_path: ~/.config/obs-yt-clipper/credentials.json
+
+# Path where the refresh token will be stored (created by auth_setup.py)
+token_path: ~/.config/obs-yt-clipper/token.json
+
+# Log file location
+log_path: ~/.local/share/obs-yt-clipper/uploads.log
+
+# Retry settings for failed uploads
+retry:
+  # Maximum number of upload attempts
+  max_attempts: 3
+  # Initial backoff time in seconds (doubles with each retry)
+  backoff_seconds: 30
